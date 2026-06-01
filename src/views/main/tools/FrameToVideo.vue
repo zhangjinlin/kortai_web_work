@@ -30,7 +30,7 @@
       <div class="form-section">
         <label class="form-label">上传首帧图片</label>
         <div :class="['upload-area', { 'drag-over': dragOver }]" @dragover="onDragOver" @dragleave="onDragLeave" @drop="onDrop" @click="triggerImageUpload">
-          <input ref="imageInput" type="file" accept="image/*" multiple hidden @change="onImageInputChange" />
+          <input ref="imageInput" type="file" accept="image/*,.webp" multiple hidden @change="onImageInputChange" />
           <div class="upload-hint"><span class="upload-icon">🎬</span><span>拖拽或点击上传首帧和尾帧图片</span><span class="upload-sub">需要上传 2 张图片（首帧 + 尾帧）</span></div>
           <div v-if="store.uploading" class="upload-loading-overlay">
             <span class="upload-spinner"></span>

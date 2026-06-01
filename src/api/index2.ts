@@ -189,9 +189,10 @@ export const uploadFile = async (file: File): Promise<string | null> => {
     const objectKey = generateObjectKey(isVideo)
     const contentType = isVideo ? 'video/mp4' : 'image/webp'
 
-    // 处理图片：转 WebP
+    // 处理图片：转 WebP（已是 webp 格式则跳过转换）
     let fileToUpload: Blob | File = file
-    if (!isVideo && file.type !== 'image/webp') {
+    const isAlreadyWebp = file.type === 'image/webp' || file.name.toLowerCase().endsWith('.webp')
+    if (!isVideo && !isAlreadyWebp) {
       try {
         fileToUpload = await convertToWebp(file)
       } catch (e) {

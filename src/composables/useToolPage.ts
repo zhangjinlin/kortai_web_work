@@ -38,6 +38,14 @@ export function useToolPage(toolType: ToolType) {
 
   // 文件选择
   async function handleFiles(files: File[]) {
+    // 辅助：判断是否图片文件（MIME + 扩展名双保险）
+    const isImageFile = (f: File): boolean => {
+      if (f.type.startsWith('image/')) return true
+      // 部分浏览器对 webp 不报告正确 MIME，用扩展名兜底
+      const ext = f.name.split('.').pop()?.toLowerCase() || ''
+      return ['webp', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'].includes(ext)
+    }
+
     if (config.needVideo) {
       const videoFile = files.find(f => f.type.startsWith('video/'))
       if (videoFile) {
@@ -51,7 +59,7 @@ export function useToolPage(toolType: ToolType) {
     }
 
     if (config.needImage) {
-      const imageFiles = files.filter(f => f.type.startsWith('image/'))
+      const imageFiles = files.filter(f => isImageFile(f))
       if (imageFiles.length === 0) {
         showToast('请选择图片文件')
         return

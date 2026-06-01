@@ -37,7 +37,7 @@
       <div class="form-section">
         <label class="form-label">上传参考图片（最多 {{ config.maxImages }} 张）</label>
         <div :class="['upload-area', { 'drag-over': dragOver }]" @dragover="onDragOver" @dragleave="onDragLeave" @drop="onDrop" @click="triggerImageUpload">
-          <input ref="imageInput" type="file" accept="image/*" multiple hidden @change="onImageInputChange" />
+          <input ref="imageInput" type="file" accept="image/*,.webp" multiple hidden @change="onImageInputChange" />
           <div class="upload-hint">
             <span class="upload-icon">📁</span>
             <span>拖拽图片到此处或点击上传</span>

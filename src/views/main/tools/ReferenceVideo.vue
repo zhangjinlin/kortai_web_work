@@ -30,7 +30,7 @@
       <div class="form-section">
         <label class="form-label">上传参考图片（最多 {{ config.maxImages }} 张）</label>
         <div :class="['upload-area', { 'drag-over': dragOver }]" @dragover="onDragOver" @dragleave="onDragLeave" @drop="onDrop" @click="triggerImageUpload">
-          <input ref="imageInput" type="file" accept="image/*" multiple hidden @change="onImageInputChange" />
+          <input ref="imageInput" type="file" accept="image/*,.webp" multiple hidden @change="onImageInputChange" />
           <div class="upload-hint"><span class="upload-icon">🖼️</span><span>拖拽图片到此处或点击上传</span><span class="upload-sub">支持 JPG、PNG、WebP 格式</span></div>
           <div v-if="store.uploading" class="upload-loading-overlay">
             <span class="upload-spinner"></span>
@@ -50,7 +50,40 @@
 
       <div class="form-section">
         <label class="form-label">描述你的想法</label>
-        <textarea v-model="store.prompt" class="prompt-input" rows="4" placeholder="请输入你想要生成的视频描述..."></textarea>
+        <div class="mention-input-wrapper">
+          <!-- @mention 建议下拉 -->
+          <div v-if="showMentions && mentionItems.length > 0" class="mention-dropdown">
+            <div
+              v-for="(item, idx) in mentionItems"
+              :key="idx"
+              :class="['mention-item', { active: mentionActiveIdx === idx }]"
+              @mousedown.prevent="insertMention(item.index)"
+            >
+              <img :src="item.url" class="mention-thumb" />
+              <span class="mention-label">@image{{ item.index }}</span>
+            </div>
+          </div>
+          <textarea
+            ref="promptTextarea"
+            v-model="store.prompt"
+            class="prompt-input"
+            rows="4"
+            placeholder="请输入描述，输入 @ 可引用已上传的图片"
+            @input="onPromptInput"
+            @keydown="onPromptKeydown"
+          ></textarea>
+        </div>
+        <!-- 已引用的图片标签 -->
+        <div v-if="activeMentions.length > 0" class="mention-tags">
+          <span
+            v-for="(m, idx) in activeMentions"
+            :key="idx"
+            class="mention-tag"
+            @click="removeMentionTag(m.token)"
+          >
+            🖼️ {{ m.token }} ✕
+          </span>
+        </div>
         <div v-if="store.selectedModel?.hints?.length" class="hints-section">
           <span class="hints-label">试试这些：</span>
           <button v-for="(hint, i) in store.selectedModel.hints.slice(0, 5)" :key="i" class="hint-btn" @click="store.prompt = hint.prompt?.zh || hint.prompt?.en || ''">
@@ -98,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useToolPage } from '@/composables/useToolPage'
 import { TaskStatus } from '@/api/index2'
 
@@ -112,6 +145,127 @@ const statusClass = computed(() => {
 
 function handleSelectModel(index: number) {
   store.selectModel(index)
+}
+
+// ========== @mention 功能 ==========
+const promptTextarea = ref<HTMLTextAreaElement | null>(null)
+const showMentions = ref(false)
+const mentionQuery = ref('')
+const mentionActiveIdx = ref(0)
+const mentionCursorPos = ref(0) // 记录 @ 在文本中的位置
+
+// 可用图片列表（索引+url）
+const mentionItems = computed(() => {
+  if (!showMentions.value) return []
+  const query = mentionQuery.value.toLowerCase()
+  return store.uploadedUrls
+    .map((url, i) => ({ url, index: i + 1 }))
+    .filter(item => {
+      if (!query) return true
+      return `image${item.index}`.includes(query)
+    })
+})
+
+// 当前 prompt 中活跃的 @imageN 引用
+const activeMentions = computed(() => {
+  const matches = store.prompt.match(/@image\d+/gi) || []
+  return [...new Set(matches)].map(token => ({ token: token.toLowerCase() }))
+})
+
+function getCursorPosition(el: HTMLTextAreaElement): number {
+  return el.selectionStart
+}
+
+function detectMention(text: string, cursorPos: number): { show: boolean; query: string; atPos: number } {
+  const beforeCursor = text.slice(0, cursorPos)
+  const atIdx = beforeCursor.lastIndexOf('@')
+  if (atIdx === -1) return { show: false, query: '', atPos: -1 }
+
+  // @ 前面不能是字母数字，确保是独立的 @
+  if (atIdx > 0 && /[\w\u4e00-\u9fa5]/.test(beforeCursor[atIdx - 1])) {
+    return { show: false, query: '', atPos: -1 }
+  }
+
+  const query = beforeCursor.slice(atIdx + 1)
+
+  // 已经是完整的 @imageN（后面跟空格或结尾），不弹
+  if (/^image\d+$/i.test(query)) {
+    const afterCursor = text.slice(cursorPos)
+    if (afterCursor.startsWith(' ') || afterCursor.length === 0 || afterCursor.startsWith('\n')) {
+      return { show: false, query: '', atPos: -1 }
+    }
+  }
+
+  // query 不含空格、换行
+  if (query.includes(' ') || query.includes('\n') || query.length > 30) {
+    return { show: false, query: '', atPos: -1 }
+  }
+
+  return { show: true, query, atPos: atIdx }
+}
+
+function onPromptInput() {
+  const el = promptTextarea.value
+  if (!el) return
+
+  const cursorPos = getCursorPosition(el)
+  const { show, query, atPos } = detectMention(store.prompt, cursorPos)
+
+  showMentions.value = show && store.uploadedUrls.length > 0
+  mentionQuery.value = query
+  mentionCursorPos.value = atPos
+  mentionActiveIdx.value = 0
+}
+
+function onPromptKeydown(e: KeyboardEvent) {
+  if (!showMentions.value) return
+
+  const items = mentionItems.value
+  if (items.length === 0) return
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    mentionActiveIdx.value = (mentionActiveIdx.value + 1) % items.length
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    mentionActiveIdx.value = (mentionActiveIdx.value - 1 + items.length) % items.length
+  } else if (e.key === 'Enter' || e.key === 'Tab') {
+    e.preventDefault()
+    const item = items[mentionActiveIdx.value]
+    if (item) insertMention(item.index)
+  } else if (e.key === 'Escape') {
+    e.preventDefault()
+    showMentions.value = false
+  }
+}
+
+function insertMention(imageIndex: number) {
+  const el = promptTextarea.value
+  if (!el) return
+
+  const atPos = mentionCursorPos.value
+  const cursorPos = getCursorPosition(el)
+  const beforeAt = store.prompt.slice(0, atPos)
+  const afterCursor = store.prompt.slice(cursorPos)
+  const mention = `@image${imageIndex} `
+
+  const newText = beforeAt + mention + afterCursor
+  store.prompt = newText
+  showMentions.value = false
+  mentionQuery.value = ''
+
+  // 恢复光标位置到 mention 后面
+  requestAnimationFrame(() => {
+    const newCursor = beforeAt.length + mention.length
+    el.setSelectionRange(newCursor, newCursor)
+    el.focus()
+  })
+}
+
+function removeMentionTag(token: string) {
+  store.prompt = store.prompt
+    .replace(new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s?', 'gi'), '')
+    .trim()
 }
 </script>
 
