@@ -141,10 +141,10 @@ const handleLogin = async () => {
   errorMsg.value = ''
 
   // 限制只有特定账号才能登录
-  if (email.value !== '421377983@qq.com') {
-    errorMsg.value = '该账号没有登录权限'
-    return
-  }
+//   if (email.value !== '421377983@qq.com') {
+//     errorMsg.value = '该账号没有登录权限'
+//     return
+//   }
 
   if (!email.value.includes('@') || password.value.length < 6) {
     errorMsg.value = '邮箱或密码错误'
