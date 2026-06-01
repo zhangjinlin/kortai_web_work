@@ -32,11 +32,18 @@
         <div :class="['upload-area', { 'drag-over': dragOver }]" @dragover="onDragOver" @dragleave="onDragLeave" @drop="onDrop" @click="triggerVideoUpload">
           <input ref="videoInput" type="file" accept="video/*" hidden @change="onImageInputChange" />
           <div class="upload-hint"><span class="upload-icon">📹</span><span>拖拽或点击上传参考视频</span><span class="upload-sub">支持 MP4、MOV 等格式</span></div>
+          <div v-if="store.uploading" class="upload-loading-overlay">
+            <span class="upload-spinner"></span>
+            <span class="upload-loading-text">正在上传...</span>
+          </div>
         </div>
         <div v-if="store.uploadedUrls.length > 0" class="image-list">
           <div v-for="(url, i) in store.uploadedUrls" :key="i" class="image-item">
             <video :src="url" class="thumb" style="object-fit: cover;"></video>
             <button class="remove-btn" @click="store.removeImage(i)">✕</button>
+          </div>
+          <div v-if="store.uploading" class="image-item uploading">
+            <span class="spinner-small"></span>
           </div>
         </div>
       </div>

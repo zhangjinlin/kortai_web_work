@@ -43,6 +43,10 @@
             <span>拖拽图片到此处或点击上传</span>
             <span class="upload-sub">支持 JPG、PNG、WebP 格式</span>
           </div>
+          <div v-if="store.uploading" class="upload-loading-overlay">
+            <span class="upload-spinner"></span>
+            <span class="upload-loading-text">正在上传...</span>
+          </div>
         </div>
         <div v-if="store.uploadedUrls.length > 0" class="image-list">
           <div v-for="(url, i) in store.uploadedUrls" :key="i" class="image-item">

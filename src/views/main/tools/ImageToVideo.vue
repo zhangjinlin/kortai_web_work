@@ -32,11 +32,18 @@
         <div :class="['upload-area', { 'drag-over': dragOver }]" @dragover="onDragOver" @dragleave="onDragLeave" @drop="onDrop" @click="triggerImageUpload">
           <input ref="imageInput" type="file" accept="image/*" multiple hidden @change="onImageInputChange" />
           <div class="upload-hint"><span class="upload-icon">📁</span><span>拖拽图片到此处或点击上传</span><span class="upload-sub">支持 JPG、PNG、WebP 格式</span></div>
+          <div v-if="store.uploading" class="upload-loading-overlay">
+            <span class="upload-spinner"></span>
+            <span class="upload-loading-text">正在上传...</span>
+          </div>
         </div>
         <div v-if="store.uploadedUrls.length > 0" class="image-list">
           <div v-for="(url, i) in store.uploadedUrls" :key="i" class="image-item">
             <img :src="url" class="thumb" />
             <button class="remove-btn" @click="store.removeImage(i)">✕</button>
+          </div>
+          <div v-if="store.uploading" class="image-item uploading">
+            <span class="spinner-small"></span>
           </div>
         </div>
       </div>

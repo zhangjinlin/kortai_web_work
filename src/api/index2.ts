@@ -1,5 +1,4 @@
 import { api as http } from './index'
-import { getBaseUrl } from '@/utils/env'
 
 interface ApiResponse<T = any> {
   code: number
@@ -150,24 +149,6 @@ const generateObjectKey = (isVideo: boolean): string => {
   return `app-upload/web/${dateStr}/${uuid}.webp`
 }
 
-// 获取 Token
-const getToken = (): string => {
-  const cookies = document.cookie
-  if (!cookies) return ''
-  const cookieList = cookies.split('; ')
-  for (const cookie of cookieList) {
-    const parts = cookie.split('=')
-    if (parts[0] === 'USER_STORE') {
-      try {
-        const userStore = JSON.parse(decodeURIComponent(parts[1]))
-        return userStore.accessToken || userStore.token || ''
-      } catch (e) {}
-      break
-    }
-  }
-  return ''
-}
-
 // 图片转 WebP
 const convertToWebp = (file: File, maxSize: number = 2000): Promise<Blob> => {
   return new Promise((resolve, reject) => {
@@ -204,7 +185,6 @@ const convertToWebp = (file: File, maxSize: number = 2000): Promise<Blob> => {
 // 上传文件到 S3
 export const uploadFile = async (file: File): Promise<string | null> => {
   try {
-    const token = getToken()
     const isVideo = file.type.startsWith('video/')
     const objectKey = generateObjectKey(isVideo)
     const contentType = isVideo ? 'video/mp4' : 'image/webp'
@@ -219,24 +199,14 @@ export const uploadFile = async (file: File): Promise<string | null> => {
       }
     }
 
-    // 获取预签名 URL
-    const baseUrl = getBaseUrl()
-    const presignedRes = await fetch(`${baseUrl}/api/s3/presigned-url`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': token ? `Bearer ${token}` : ''
-      },
-      body: JSON.stringify({ objectKey, contentType })
-    })
-
-    const presignedData = await presignedRes.json()
-    if (presignedData.code !== 200 || !presignedData.data) {
-      console.error('获取预签名URL失败:', presignedData.message)
+    // 获取预签名 URL（通过 axios，生产环境自动加密）
+    const presignedRes = await api.getPresignedUrl(objectKey, contentType)
+    if (presignedRes.code !== 200 || !presignedRes.data) {
+      console.error('获取预签名URL失败:', presignedRes)
       return null
     }
 
-    const { presignedUrl, resourceUrl } = presignedData.data
+    const { presignedUrl, resourceUrl } = presignedRes.data
 
     // 上传到 S3
     const uploadRes = await fetch(presignedUrl, {
@@ -255,6 +225,14 @@ export const uploadFile = async (file: File): Promise<string | null> => {
     console.error('上传出错:', error)
     return null
   }
+}
+
+// 预签名 URL 响应
+interface PresignedUrlData {
+  presignedUrl: string
+  resourceUrl: string
+  httpMethod?: string
+  headers?: Record<string, string>
 }
 
 // ========== API 方法 ==========
@@ -305,5 +283,10 @@ export const api = {
   // 批量获取任务结果（用于轮询进行中的任务）
   batchGetTasks(taskIds: string[]) {
     return http.post<TaskResultSubItem[]>('/api/task/batchGet', { taskIds })
+  },
+
+  // 获取 S3 预签名上传 URL
+  getPresignedUrl(objectKey: string, contentType: string) {
+    return http.post<PresignedUrlData>('/api/s3/presigned-url', { objectKey, contentType })
   }
 }
