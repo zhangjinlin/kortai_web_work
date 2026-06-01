@@ -280,11 +280,6 @@ export const api = {
     return http.post<ApiResponse>('/api/task/batchDel', { taskIds })
   },
 
-  // 批量获取任务结果（用于轮询进行中的任务）
-  batchGetTasks(taskIds: string[]) {
-    return http.post<TaskResultSubItem[]>('/api/task/batchGet', { taskIds })
-  },
-
   // 获取 S3 预签名上传 URL
   getPresignedUrl(objectKey: string, contentType: string) {
     return http.post<PresignedUrlData>('/api/s3/presigned-url', { objectKey, contentType })

@@ -228,35 +228,38 @@ export const useCreatorStore = defineStore('creator', () => {
 
       try {
         const ids = Array.from(pollingTaskIds.value)
-        const res = await api.batchGetTasks(ids)
+        let hasCompleted = false
 
-        if (res.code === 200 && res.data) {
-          let hasCompleted = false
-          const results = Array.isArray(res.data) ? res.data : []
+        // 逐个查询（batchGet 服务端不可用，改用 getTaskResult）
+        for (const taskId of ids) {
+          try {
+            const res = await api.getTaskResult(taskId)
+            if (res.code === 200 && res.data) {
+              const status = res.data.taskStatus
+              if (status !== TaskStatus.QUEUING && status !== TaskStatus.PROCESSING) {
+                pollingTaskIds.value.delete(taskId)
+                hasCompleted = true
+              }
 
-          for (const result of results) {
-            const status = result.taskStatus
-            if (status !== TaskStatus.QUEUING && status !== TaskStatus.PROCESSING) {
-              pollingTaskIds.value.delete(result.taskId)
-              hasCompleted = true
-            }
-
-            // 更新列表中的状态
-            for (const item of list.value) {
-              const sub = item.items?.[0]
-              if (sub?.taskId === result.taskId) {
-                sub.taskStatus = status
-                sub.resultUrl = result.resultUrl
-                sub.coverUrl = result.coverUrl
-                sub.fileType = result.fileType
-                break
+              // 更新列表中的状态
+              for (const item of list.value) {
+                const sub = item.items?.[0]
+                if (sub?.taskId === taskId) {
+                  sub.taskStatus = status
+                  sub.resultUrl = res.data.resultUrl
+                  sub.coverUrl = res.data.coverUrl
+                  sub.fileType = res.data.fileType
+                  break
+                }
               }
             }
+          } catch {
+            // 单个查询失败，跳过
           }
+        }
 
-          if (hasCompleted) {
-            saveCache()
-          }
+        if (hasCompleted) {
+          saveCache()
         }
       } catch (e) {
         console.error('轮询任务状态失败:', e)
