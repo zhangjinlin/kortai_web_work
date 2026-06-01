@@ -235,7 +235,7 @@ export const useToolStore = defineStore('tool', () => {
     if (currentTool.value === 'referenceVideo' && prompt.value.trim()) {
       const modelName = selectedModel.value.name?.toLowerCase() || ''
       const isWan = modelName.includes('wan')
-      params.prompt = params.prompt.replace(/@image(\d+)/gi, (_, n) => isWan ? `图${n}` : `[Image ${n}]`)
+      params.prompt = params.prompt.replace(/@image(\d+)/gi, (_: string, n: string) => isWan ? `图${n}` : `[Image ${n}]`)
       if (uploadedUrls.value.length > 0) {
         params.resolution = '1:1'
       }
