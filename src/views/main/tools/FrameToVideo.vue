@@ -39,7 +39,7 @@
         </div>
         <div v-if="store.uploadedUrls.length > 0" class="image-list">
           <div v-for="(url, i) in store.uploadedUrls" :key="i" class="image-item">
-            <img :src="url" class="thumb" />
+            <img :src="url" class="thumb" referrerpolicy="no-referrer" />
             <span class="frame-label">{{ i === 0 ? '首帧' : '尾帧' }}</span>
             <button class="remove-btn" @click="store.removeImage(i)">✕</button>
           </div>

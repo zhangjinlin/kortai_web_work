@@ -17,6 +17,13 @@ export default defineConfig({
         target: 'https://api-test.kortai.info',
         changeOrigin: true,
         secure: false
+      },
+      // 代理图片资源，避免跨域/防盗链拦截
+      '/res': {
+        target: 'https://res.kortai.info',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/res/, '')
       }
     }
   }

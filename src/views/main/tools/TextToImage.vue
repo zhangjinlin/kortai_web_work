@@ -111,6 +111,7 @@
             :src="store.taskResult.resultUrl"
             alt="生成结果"
             class="result-image"
+            referrerpolicy="no-referrer"
             @click="previewImage"
           />
           <div class="result-actions">
@@ -129,7 +130,7 @@
 
     <!-- 图片预览弹窗 -->
     <div v-if="previewUrl" class="preview-overlay" @click="previewUrl = ''">
-      <img :src="previewUrl" class="preview-img" @click.stop />
+      <img :src="previewUrl" class="preview-img" referrerpolicy="no-referrer" @click.stop />
     </div>
   </div>
 </template>

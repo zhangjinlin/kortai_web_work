@@ -50,7 +50,7 @@
         </div>
         <div v-if="store.uploadedUrls.length > 0" class="image-list">
           <div v-for="(url, i) in store.uploadedUrls" :key="i" class="image-item">
-            <img :src="url" class="thumb" />
+            <img :src="url" class="thumb" referrerpolicy="no-referrer" />
             <button class="remove-btn" @click="store.removeImage(i)">✕</button>
           </div>
           <div v-if="store.uploading" class="image-item uploading">
@@ -94,7 +94,7 @@
         </div>
         <div v-if="store.taskStatus === 1 || store.taskStatus === 2" class="progress-bar"><div class="progress-inner"></div></div>
         <div v-if="store.taskResult?.resultUrl" class="result-content">
-          <img :src="store.taskResult.resultUrl" alt="生成结果" class="result-image" @click="previewImage" />
+          <img :src="store.taskResult.resultUrl" alt="生成结果" class="result-image" referrerpolicy="no-referrer" @click="previewImage" />
           <div class="result-actions">
             <a :href="store.taskResult.resultUrl" target="_blank" class="btn btn-primary">查看原图</a>
             <button class="btn btn-default" @click="store.resetTask()">重新生成</button>
@@ -108,7 +108,7 @@
     </div>
 
     <div v-if="previewUrl" class="preview-overlay" @click="previewUrl = ''">
-      <img :src="previewUrl" class="preview-img" @click.stop />
+      <img :src="previewUrl" class="preview-img" referrerpolicy="no-referrer" @click.stop />
     </div>
   </div>
 </template>

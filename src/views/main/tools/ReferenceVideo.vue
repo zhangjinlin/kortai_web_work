@@ -39,7 +39,7 @@
         </div>
         <div v-if="store.uploadedUrls.length > 0" class="image-list">
           <div v-for="(url, i) in store.uploadedUrls" :key="i" class="image-item">
-            <img :src="url" class="thumb" />
+            <img :src="url" class="thumb" referrerpolicy="no-referrer" />
             <button class="remove-btn" @click="store.removeImage(i)">✕</button>
           </div>
           <div v-if="store.uploading" class="image-item uploading">
@@ -59,7 +59,7 @@
               :class="['mention-item', { active: mentionActiveIdx === idx }]"
               @mousedown.prevent="insertMention(item.index)"
             >
-              <img :src="item.url" class="mention-thumb" />
+              <img :src="item.url" class="mention-thumb" referrerpolicy="no-referrer" />
               <span class="mention-label">@image{{ item.index }}</span>
             </div>
           </div>

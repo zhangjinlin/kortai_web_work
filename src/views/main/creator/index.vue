@@ -55,7 +55,13 @@
               class="card-img"
               alt="视频封面"
               loading="lazy"
+              referrerpolicy="no-referrer"
+              @error="onImgError"
             />
+            <!-- 封面加载失败 fallback -->
+            <div v-else-if="coverFail(item)" class="card-video-placeholder">
+              <span class="video-icon">▶</span>
+            </div>
             <div v-else class="card-video-placeholder">
               <span class="video-icon">▶</span>
             </div>
@@ -68,6 +74,8 @@
               class="card-img"
               alt="生成结果"
               loading="lazy"
+              referrerpolicy="no-referrer"
+              @error="onImgError"
             />
             <div v-else class="card-img-placeholder">
               <span>生成中...</span>
@@ -160,6 +168,8 @@
           :src="resultUrl(previewData)"
           class="preview-img"
           alt="预览"
+          referrerpolicy="no-referrer"
+          @error="onImgError"
         />
         <div class="preview-info">
           <p><strong>提示词：</strong>{{ previewData.prompt || '无' }}</p>
@@ -174,7 +184,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useCreatorStore, isVideoAgent, isVideoByFileType } from '@/stores/creator'
 import { TaskStatus, TaskStatusMessage, type TaskResultHistoryModel } from '@/api/index2'
 import { showToast } from '@/utils/toast'
@@ -182,7 +192,22 @@ import { showToast } from '@/utils/toast'
 const store = useCreatorStore()
 const previewData = ref<TaskResultHistoryModel | null>(null)
 const deleteTarget = ref<TaskResultHistoryModel | null>(null)
+const imgErrorSet = reactive(new Set<string>())
 let scrollEl: HTMLElement | null = null
+
+function onImgError(e: Event) {
+  const img = e.target as HTMLImageElement
+  const url = img.src
+  console.warn('[Creator] 图片加载失败:', url)
+  imgErrorSet.add(url)
+  // 隐藏裂图，显示占位
+  img.style.display = 'none'
+}
+
+function coverFail(item: TaskResultHistoryModel): boolean {
+  const url = coverUrl(item)
+  return !!url && imgErrorSet.has(url)
+}
 
 const filterTabs: { key: 'all' | 'image' | 'video'; label: string }[] = [
   { key: 'all', label: '全部' },
