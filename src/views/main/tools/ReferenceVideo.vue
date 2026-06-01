@@ -28,10 +28,10 @@
       </div>
 
       <div class="form-section">
-        <label class="form-label">{{ config.needVideo ? '上传参考视频' : '上传参考图片' }}（最多 {{ config.maxImages }} 张）</label>
-        <div :class="['upload-area', { 'drag-over': dragOver }]" @dragover="onDragOver" @dragleave="onDragLeave" @drop="onDrop" @click="triggerVideoUpload">
-          <input ref="videoInput" type="file" accept="video/*" hidden @change="onImageInputChange" />
-          <div class="upload-hint"><span class="upload-icon">📹</span><span>拖拽或点击上传参考视频</span><span class="upload-sub">支持 MP4、MOV 等格式</span></div>
+        <label class="form-label">上传参考图片（最多 {{ config.maxImages }} 张）</label>
+        <div :class="['upload-area', { 'drag-over': dragOver }]" @dragover="onDragOver" @dragleave="onDragLeave" @drop="onDrop" @click="triggerImageUpload">
+          <input ref="imageInput" type="file" accept="image/*" multiple hidden @change="onImageInputChange" />
+          <div class="upload-hint"><span class="upload-icon">🖼️</span><span>拖拽图片到此处或点击上传</span><span class="upload-sub">支持 JPG、PNG、WebP 格式</span></div>
           <div v-if="store.uploading" class="upload-loading-overlay">
             <span class="upload-spinner"></span>
             <span class="upload-loading-text">正在上传...</span>
@@ -39,7 +39,7 @@
         </div>
         <div v-if="store.uploadedUrls.length > 0" class="image-list">
           <div v-for="(url, i) in store.uploadedUrls" :key="i" class="image-item">
-            <video :src="url" class="thumb" style="object-fit: cover;"></video>
+            <img :src="url" class="thumb" />
             <button class="remove-btn" @click="store.removeImage(i)">✕</button>
           </div>
           <div v-if="store.uploading" class="image-item uploading">
@@ -102,7 +102,7 @@ import { computed } from 'vue'
 import { useToolPage } from '@/composables/useToolPage'
 import { TaskStatus } from '@/api/index2'
 
-const { store, config, videoInput, dragOver, onDragOver, onDragLeave, onDrop, triggerVideoUpload, onImageInputChange, onSubmit } = useToolPage('referenceVideo')
+const { store, config, imageInput, dragOver, onDragOver, onDragLeave, onDrop, triggerImageUpload, onImageInputChange, onSubmit } = useToolPage('referenceVideo')
 
 const statusClass = computed(() => {
   if (store.taskStatus === TaskStatus.COMPLETED) return 'status-success'

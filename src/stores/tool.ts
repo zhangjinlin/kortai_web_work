@@ -13,7 +13,7 @@ export const ToolConfig: Record<ToolType, { name: string; agent: string; icon: s
   textToVideo: { name: '文生视频', agent: 'Text2Video', icon: '📝', needImage: false, maxImages: 0, needVideo: false, desc: '输入文字描述，AI 为你生成视频' },
   imageToVideo: { name: '图生视频', agent: 'Image2Video', icon: '🎬', needImage: true, maxImages: 5, needVideo: false, desc: '上传一张或多张图片，AI 根据图片生成视频' },
   frameToVideo: { name: '首尾帧生视频', agent: 'Frame2Video', icon: '🎞️', needImage: true, maxImages: 2, needVideo: false, desc: '上传首帧和尾帧图片，AI 生成中间过渡视频' },
-  referenceVideo: { name: '参考生视频', agent: 'Reference2Video', icon: '📹', needImage: true, maxImages: 1, needVideo: true, desc: '上传参考视频，AI 生成风格一致的视频' },
+  referenceVideo: { name: '参考生视频', agent: 'Reference2Video', icon: '🖼️', needImage: true, maxImages: 9, needVideo: false, desc: '上传参考图片，AI 根据图片生成风格一致的视频' },
 }
 
 export const useToolStore = defineStore('tool', () => {
@@ -235,7 +235,7 @@ export const useToolStore = defineStore('tool', () => {
     if (currentTool.value === 'referenceVideo' && prompt.value.trim()) {
       const modelName = selectedModel.value.name?.toLowerCase() || ''
       const isWan = modelName.includes('wan')
-      params.prompt = params.prompt.replace(/@image1/gi, isWan ? '图1' : '[Image 1]')
+      params.prompt = params.prompt.replace(/@image(\d+)/gi, (_, n) => isWan ? `图${n}` : `[Image ${n}]`)
       if (uploadedUrls.value.length > 0) {
         params.resolution = '1:1'
       }
