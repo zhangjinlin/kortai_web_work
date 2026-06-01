@@ -132,6 +132,18 @@
       没有更多了
     </div>
 
+    <!-- 删除确认弹窗 -->
+    <div v-if="deleteTarget" class="confirm-overlay" @click="deleteTarget = null">
+      <div class="confirm-dialog" @click.stop>
+        <p class="confirm-title">确认删除</p>
+        <p class="confirm-msg">确定要删除这个生成记录吗？删除后不可恢复。</p>
+        <div class="confirm-actions">
+          <button class="btn btn-default" @click="deleteTarget = null">取消</button>
+          <button class="btn btn-danger" @click="confirmDelete">确认删除</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 预览弹窗 -->
     <div v-if="previewData" class="preview-overlay" @click="previewData = null">
       <div class="preview-container" @click.stop>
@@ -169,6 +181,7 @@ import { showToast } from '@/utils/toast'
 
 const store = useCreatorStore()
 const previewData = ref<TaskResultHistoryModel | null>(null)
+const deleteTarget = ref<TaskResultHistoryModel | null>(null)
 let scrollEl: HTMLElement | null = null
 
 const filterTabs: { key: 'all' | 'image' | 'video'; label: string }[] = [
@@ -248,7 +261,14 @@ function handleRefresh() {
 }
 
 function handleDelete(item: TaskResultHistoryModel) {
-  store.deleteHistory(item)
+  deleteTarget.value = item
+}
+
+function confirmDelete() {
+  if (deleteTarget.value) {
+    store.deleteHistory(deleteTarget.value)
+    deleteTarget.value = null
+  }
 }
 
 function handleReGenerate(item: TaskResultHistoryModel) {
@@ -574,6 +594,61 @@ onUnmounted(() => {
   gap: 8px;
   font-size: 13px;
   color: #999;
+}
+
+/* 删除确认弹窗 */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.confirm-dialog {
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px 32px 20px;
+  min-width: 360px;
+  max-width: 420px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+
+.confirm-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 10px;
+}
+
+.confirm-msg {
+  font-size: 14px;
+  color: #666;
+  margin: 0 0 24px;
+  line-height: 1.6;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.btn-danger {
+  background: #ff4d4f;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-danger:hover {
+  background: #e04345;
 }
 
 /* 预览弹窗 */

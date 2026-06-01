@@ -275,9 +275,9 @@ export const api = {
     return http.get<HistoryListResponse>('/api/task/group/history', params)
   },
 
-  // 批量删除任务
+  // 批量删除任务（服务端要求 DELETE 方法）
   batchDeleteTasks(taskIds: string[]) {
-    return http.post<ApiResponse>('/api/task/batchDel', { taskIds })
+    return http.delete<ApiResponse>('/api/task/batchDel', { taskIds })
   },
 
   // 获取 S3 预签名上传 URL
