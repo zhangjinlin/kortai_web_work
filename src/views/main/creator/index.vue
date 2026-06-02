@@ -50,7 +50,7 @@
         <div class="card-media" @click="previewItem(item)">
           <template v-if="isVideo(item)">
             <img
-              v-if="coverUrl(item)"
+              v-if="coverUrl(item) && !coverFail(item)"
               :src="coverUrl(item)"
               class="card-img"
               alt="视频封面"
@@ -58,10 +58,7 @@
               referrerpolicy="no-referrer"
               @error="onImgError"
             />
-            <!-- 封面加载失败 fallback -->
-            <div v-else-if="coverFail(item)" class="card-video-placeholder">
-              <span class="video-icon">▶</span>
-            </div>
+            <!-- 封面加载失败或无封面 -->
             <div v-else class="card-video-placeholder">
               <span class="video-icon">▶</span>
             </div>
@@ -69,7 +66,7 @@
           </template>
           <template v-else>
             <img
-              v-if="resultUrl(item)"
+              v-if="resultUrl(item) && !imageFail(item)"
               :src="resultUrl(item)"
               class="card-img"
               alt="生成结果"
@@ -78,10 +75,20 @@
               @error="onImgError"
             />
             <div v-else class="card-img-placeholder">
-              <span>生成中...</span>
+              <span>{{ imageFail(item) ? '加载失败' : '生成中...' }}</span>
             </div>
             <span class="media-badge image-badge">图片</span>
           </template>
+
+          <!-- 下载按钮（悬浮显示，已完成的任务才显示） -->
+          <button
+            v-if="!isRunning(item) && !isFailed(item) && (resultUrl(item) || coverUrl(item))"
+            class="download-btn"
+            title="下载"
+            @click.stop="handleDownload(item)"
+          >
+            ⬇
+          </button>
 
           <!-- 状态标签 -->
           <span v-if="isRunning(item)" class="status-overlay">
@@ -156,6 +163,9 @@
     <div v-if="previewData" class="preview-overlay" @click="previewData = null">
       <div class="preview-container" @click.stop>
         <button class="preview-close" @click="previewData = null">✕</button>
+        <button class="preview-download" title="下载" @click="handleDownload(previewData)">
+          ⬇ 下载
+        </button>
         <video
           v-if="isVideo(previewData)"
           :src="resultUrl(previewData)"
@@ -169,7 +179,6 @@
           class="preview-img"
           alt="预览"
           referrerpolicy="no-referrer"
-          @error="onImgError"
         />
         <div class="preview-info">
           <p><strong>提示词：</strong>{{ previewData.prompt || '无' }}</p>
@@ -188,6 +197,7 @@ import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useCreatorStore, isVideoAgent, isVideoByFileType } from '@/stores/creator'
 import { TaskStatus, TaskStatusMessage, type TaskResultHistoryModel } from '@/api/index2'
 import { showToast } from '@/utils/toast'
+import { resProxy } from '@/utils/resUrl'
 
 const store = useCreatorStore()
 const previewData = ref<TaskResultHistoryModel | null>(null)
@@ -200,12 +210,15 @@ function onImgError(e: Event) {
   const url = img.src
   console.warn('[Creator] 图片加载失败:', url)
   imgErrorSet.add(url)
-  // 隐藏裂图，显示占位
-  img.style.display = 'none'
 }
 
 function coverFail(item: TaskResultHistoryModel): boolean {
   const url = coverUrl(item)
+  return !!url && imgErrorSet.has(url)
+}
+
+function imageFail(item: TaskResultHistoryModel): boolean {
+  const url = resultUrl(item)
   return !!url && imgErrorSet.has(url)
 }
 
@@ -224,11 +237,11 @@ function isVideo(item: TaskResultHistoryModel): boolean {
 }
 
 function resultUrl(item: TaskResultHistoryModel): string {
-  return item.items?.[0]?.resultUrl || ''
+  return resProxy(item.items?.[0]?.resultUrl || '')
 }
 
 function coverUrl(item: TaskResultHistoryModel): string {
-  return item.items?.[0]?.coverUrl || ''
+  return resProxy(item.items?.[0]?.coverUrl || '')
 }
 
 function isRunning(item: TaskResultHistoryModel): boolean {
@@ -308,6 +321,51 @@ function previewItem(item: TaskResultHistoryModel) {
     return
   }
   previewData.value = item
+}
+
+// ========== 下载 ==========
+async function handleDownload(item: TaskResultHistoryModel | null) {
+  if (!item) return
+  const sub = item.items?.[0]
+  if (!sub) return
+
+  const isVideoFile = isVideo(item)
+  // 原始 URL（用于提取文件名）
+  const rawUrl = isVideoFile ? (sub.resultUrl || sub.coverUrl) : sub.resultUrl
+  if (!rawUrl) return
+  // 走代理的 URL（用于请求）
+  const url = resProxy(rawUrl)
+
+  try {
+    showToast('下载中...')
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const blob = await res.blob()
+
+    // 从原始 URL 提取文件名
+    const urlPath = new URL(rawUrl).pathname
+    let filename = urlPath.split('/').pop() || (isVideoFile ? 'video.mp4' : 'image.png')
+    // 确保有正确扩展名
+    if (!filename.includes('.')) {
+      filename += isVideoFile ? '.mp4' : '.png'
+    }
+
+    // 触发下载
+    const blobUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(blobUrl)
+
+    showToast('下载完成')
+  } catch (e) {
+    console.error('[Creator] 下载失败:', url, e)
+    // fallback：直接打开
+    window.open(rawUrl, '_blank')
+  }
 }
 
 // ========== 滚动加载更多 ==========
@@ -503,6 +561,32 @@ onUnmounted(() => {
 .image-badge {
   background: rgba(255, 255, 255, 0.85);
   color: #333;
+}
+
+/* 下载按钮（卡片悬浮） */
+.download-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s, background 0.2s;
+}
+.card-media:hover .download-btn {
+  opacity: 1;
+}
+.download-btn:hover {
+  background: rgba(0, 0, 0, 0.75);
 }
 
 .status-overlay {
@@ -715,6 +799,24 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.preview-download {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  color: #fff;
+  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  z-index: 1;
+  transition: background 0.2s;
+}
+.preview-download:hover {
+  background: #1890ff;
 }
 
 .preview-img,

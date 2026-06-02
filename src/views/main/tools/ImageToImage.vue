@@ -50,7 +50,7 @@
         </div>
         <div v-if="store.uploadedUrls.length > 0" class="image-list">
           <div v-for="(url, i) in store.uploadedUrls" :key="i" class="image-item">
-            <img :src="url" class="thumb" referrerpolicy="no-referrer" />
+            <img :src="resProxy(url)" class="thumb" referrerpolicy="no-referrer" />
             <button class="remove-btn" @click="store.removeImage(i)">✕</button>
           </div>
           <div v-if="store.uploading" class="image-item uploading">
@@ -94,9 +94,9 @@
         </div>
         <div v-if="store.taskStatus === 1 || store.taskStatus === 2" class="progress-bar"><div class="progress-inner"></div></div>
         <div v-if="store.taskResult?.resultUrl" class="result-content">
-          <img :src="store.taskResult.resultUrl" alt="生成结果" class="result-image" referrerpolicy="no-referrer" @click="previewImage" />
+          <img :src="resProxy(store.taskResult.resultUrl)" alt="生成结果" class="result-image" referrerpolicy="no-referrer" @click="previewImage" />
           <div class="result-actions">
-            <a :href="store.taskResult.resultUrl" target="_blank" class="btn btn-primary">查看原图</a>
+            <button class="btn btn-primary" @click="handleDownloadImage">下载图片</button>
             <button class="btn btn-default" @click="store.resetTask()">重新生成</button>
           </div>
         </div>
@@ -117,6 +117,8 @@
 import { ref, computed } from 'vue'
 import { useToolPage } from '@/composables/useToolPage'
 import { TaskStatus } from '@/api/index2'
+import { showToast } from '@/utils/toast'
+import { resProxy } from '@/utils/resUrl'
 
 const { store, config, imageInput, dragOver, onDragOver, onDragLeave, onDrop, triggerImageUpload, onImageInputChange, onSubmit } = useToolPage('imageToImage')
 const previewUrl = ref('')
@@ -131,8 +133,32 @@ function handleSelectModel(index: number) {
   store.selectModel(index)
 }
 
+async function handleDownloadImage() {
+  const rawUrl = store.taskResult?.resultUrl
+  if (!rawUrl) return
+  try {
+    showToast('下载中...')
+    const res = await fetch(resProxy(rawUrl))
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const blob = await res.blob()
+    const filename = new URL(rawUrl).pathname.split('/').pop() || 'image.png'
+    const blobUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(blobUrl)
+    showToast('下载完成')
+  } catch (e) {
+    console.error('下载失败:', e)
+    window.open(rawUrl, '_blank')
+  }
+}
+
 function previewImage() {
-  if (store.taskResult?.resultUrl) previewUrl.value = store.taskResult.resultUrl
+  if (store.taskResult?.resultUrl) previewUrl.value = resProxy(store.taskResult.resultUrl)
 }
 </script>
 

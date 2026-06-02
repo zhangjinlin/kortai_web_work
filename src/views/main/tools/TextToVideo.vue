@@ -64,9 +64,9 @@
         </div>
         <div v-if="store.taskStatus === 1 || store.taskStatus === 2" class="progress-bar"><div class="progress-inner"></div></div>
         <div v-if="store.taskResult?.resultUrl || store.taskResult?.videoUrl" class="result-content">
-          <video v-if="store.taskResult.resultUrl || store.taskResult.videoUrl" :src="store.taskResult.resultUrl || store.taskResult.videoUrl" controls class="result-video"></video>
+          <video v-if="store.taskResult.resultUrl || store.taskResult.videoUrl" :src="resProxy(store.taskResult.resultUrl || store.taskResult.videoUrl)" controls class="result-video"></video>
           <div class="result-actions">
-            <a :href="store.taskResult.resultUrl || store.taskResult.videoUrl" target="_blank" class="btn btn-primary">下载视频</a>
+            <button class="btn btn-primary" @click="handleDownloadVideo">下载视频</button>
             <button class="btn btn-default" @click="store.resetTask()">重新生成</button>
           </div>
         </div>
@@ -83,6 +83,8 @@
 import { computed } from 'vue'
 import { useToolPage } from '@/composables/useToolPage'
 import { TaskStatus } from '@/api/index2'
+import { showToast } from '@/utils/toast'
+import { resProxy } from '@/utils/resUrl'
 
 const { store, config, onSubmit } = useToolPage('textToVideo')
 
@@ -94,6 +96,30 @@ const statusClass = computed(() => {
 
 function handleSelectModel(index: number) {
   store.selectModel(index)
+}
+
+async function handleDownloadVideo() {
+  const rawUrl = store.taskResult?.resultUrl || store.taskResult?.videoUrl
+  if (!rawUrl) return
+  try {
+    showToast('下载中...')
+    const res = await fetch(resProxy(rawUrl))
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const blob = await res.blob()
+    const filename = new URL(rawUrl).pathname.split('/').pop() || 'video.mp4'
+    const blobUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(blobUrl)
+    showToast('下载完成')
+  } catch (e) {
+    console.error('下载失败:', e)
+    window.open(rawUrl, '_blank')
+  }
 }
 </script>
 
