@@ -76,7 +76,7 @@
         <div class="result-header"><h3>生成结果</h3><span :class="['status-badge', statusClass]">{{ store.taskStatusText }}</span></div>
         <div v-if="store.taskStatus === 1 || store.taskStatus === 2" class="progress-bar"><div class="progress-inner"></div></div>
         <div v-if="store.taskResult?.resultUrl || store.taskResult?.videoUrl" class="result-content">
-          <video v-if="store.taskResult.resultUrl || store.taskResult.videoUrl" :src="resProxy(store.taskResult.resultUrl || store.taskResult.videoUrl)" controls class="result-video"></video>
+          <video v-if="store.taskResult.resultUrl || store.taskResult.videoUrl" :src="resProxy(store.taskResult.resultUrl || store.taskResult.videoUrl || '')" controls class="result-video"></video>
           <div class="result-actions">
             <button class="btn btn-primary" @click="handleDownloadVideo">下载视频</button>
             <button class="btn btn-default" @click="store.resetTask()">重新生成</button>
