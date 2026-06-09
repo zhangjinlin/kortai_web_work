@@ -109,6 +109,19 @@
             <span class="credits-tag">{{ item.credits || '-' }} 积分</span>
           </div>
 
+          <!-- Task ID -->
+          <div v-if="getTaskId(item)" class="card-taskid">
+            <span class="taskid-label">TaskID:</span>
+            <span class="taskid-text">{{ getTaskId(item) }}</span>
+            <button
+              class="taskid-copy"
+              title="复制 TaskID"
+              @click.stop="copyTaskId(getTaskId(item)!)"
+            >
+              {{ copiedId === getTaskId(item) ? '已复制' : '复制' }}
+            </button>
+          </div>
+
           <!-- prompt -->
           <p v-if="item.prompt" class="card-prompt">{{ item.prompt }}</p>
 
@@ -203,6 +216,7 @@ const store = useCreatorStore()
 const previewData = ref<TaskResultHistoryModel | null>(null)
 const deleteTarget = ref<TaskResultHistoryModel | null>(null)
 const imgErrorSet = reactive(new Set<string>())
+const copiedId = ref<string>('')
 let scrollEl: HTMLElement | null = null
 
 function onImgError(e: Event) {
@@ -289,6 +303,40 @@ function formatTime(time?: string): string {
     return `${month}-${day} ${hours}:${mins}`
   } catch {
     return time
+  }
+}
+
+function getTaskId(item: TaskResultHistoryModel): string {
+  return item.items?.[0]?.taskId || ''
+}
+
+async function copyTaskId(taskId: string) {
+  try {
+    await navigator.clipboard.writeText(taskId)
+    copiedId.value = taskId
+    showToast('TaskID 已复制')
+    setTimeout(() => {
+      if (copiedId.value === taskId) {
+        copiedId.value = ''
+      }
+    }, 1500)
+  } catch {
+    // fallback
+    const ta = document.createElement('textarea')
+    ta.value = taskId
+    ta.style.position = 'fixed'
+    ta.style.left = '-9999px'
+    document.body.appendChild(ta)
+    ta.select()
+    document.execCommand('copy')
+    document.body.removeChild(ta)
+    copiedId.value = taskId
+    showToast('TaskID 已复制')
+    setTimeout(() => {
+      if (copiedId.value === taskId) {
+        copiedId.value = ''
+      }
+    }, 1500)
   }
 }
 
@@ -646,6 +694,45 @@ onUnmounted(() => {
   border-radius: 3px;
   font-size: 11px;
   margin-left: auto;
+}
+
+/* Task ID */
+.card-taskid {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.taskid-label {
+  color: #999;
+  flex-shrink: 0;
+}
+
+.taskid-text {
+  color: #999;
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.taskid-copy {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border: 1px solid #d9d9d9;
+  border-radius: 3px;
+  background: #fff;
+  color: #666;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.taskid-copy:hover {
+  border-color: #1890ff;
+  color: #1890ff;
 }
 
 .card-prompt {
