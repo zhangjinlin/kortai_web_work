@@ -1,0 +1,52 @@
+# ============================================================
+# Nginx 配置示例：代理 /res 路径到 CDN 资源服务器
+#
+# 使用说明：
+# 1. 将此配置段添加到生产环境 Nginx server 块中
+# 2. 如果使用 CDN/负载均衡，同样需要添加对应的代理规则
+# 3. 配置完成后执行 nginx -t && nginx -s reload
+# ============================================================
+
+# 方式一：在现有 server 块中添加（推荐）
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    # ... 其他配置 ...
+
+    # 代理 CDN 静态资源，绕过防盗链
+    location /res/ {
+        # 去掉 /res 前缀后转发到 CDN
+        # 例如：/res/images/abc.png → https://res.kortai.info/images/abc.png
+        rewrite ^/res/(.*) /$1 break;
+        proxy_pass https://res.kortai.info;
+        proxy_set_header Host res.kortai.info;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        # 关键：不传 Referer，绕过 CDN 防盗链检查
+        proxy_set_header Referer "";
+        proxy_ssl_server_name on;
+    }
+
+    # SPA 路由 fallback
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+# ============================================================
+# 方式二：独立配置文件（使用 include 引入）
+#
+# 将下面内容保存为 /etc/nginx/conf.d/res-proxy.conf，
+# 然后在主配置中 include /etc/nginx/conf.d/res-proxy.conf;
+# ============================================================
+#
+# location /res/ {
+#     rewrite ^/res/(.*) /$1 break;
+#     proxy_pass https://res.kortai.info;
+#     proxy_set_header Host res.kortai.info;
+#     proxy_set_header X-Real-IP $remote_addr;
+#     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#     proxy_set_header Referer "";
+#     proxy_ssl_server_name on;
+# }

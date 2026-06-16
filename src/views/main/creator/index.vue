@@ -56,7 +56,7 @@
               alt="视频封面"
               loading="lazy"
               referrerpolicy="no-referrer"
-              @error="onImgError"
+              @error="onImgError(item)"
             />
             <!-- 封面加载失败或无封面 -->
             <div v-else class="card-video-placeholder">
@@ -72,7 +72,7 @@
               alt="生成结果"
               loading="lazy"
               referrerpolicy="no-referrer"
-              @error="onImgError"
+              @error="onImgError(item)"
             />
             <div v-else class="card-img-placeholder">
               <span>{{ imageFail(item) ? '加载失败' : '生成中...' }}</span>
@@ -215,25 +215,27 @@ import { resProxy } from '@/utils/resUrl'
 const store = useCreatorStore()
 const previewData = ref<TaskResultHistoryModel | null>(null)
 const deleteTarget = ref<TaskResultHistoryModel | null>(null)
+// 用 taskId 追踪加载失败，避免相对路径/绝对路径匹配不上
 const imgErrorSet = reactive(new Set<string>())
 const copiedId = ref<string>('')
 let scrollEl: HTMLElement | null = null
 
-function onImgError(e: Event) {
-  const img = e.target as HTMLImageElement
-  const url = img.src
-  console.warn('[Creator] 图片加载失败:', url)
-  imgErrorSet.add(url)
+function onImgError(item: TaskResultHistoryModel) {
+  const taskId = getTaskId(item)
+  if (taskId) {
+    console.warn('[Creator] 资源加载失败, taskId:', taskId)
+    imgErrorSet.add(taskId)
+  }
 }
 
 function coverFail(item: TaskResultHistoryModel): boolean {
-  const url = coverUrl(item)
-  return !!url && imgErrorSet.has(url)
+  const taskId = getTaskId(item)
+  return !!taskId && imgErrorSet.has(taskId)
 }
 
 function imageFail(item: TaskResultHistoryModel): boolean {
-  const url = resultUrl(item)
-  return !!url && imgErrorSet.has(url)
+  const taskId = getTaskId(item)
+  return !!taskId && imgErrorSet.has(taskId)
 }
 
 const filterTabs: { key: 'all' | 'image' | 'video'; label: string }[] = [
@@ -251,7 +253,8 @@ function isVideo(item: TaskResultHistoryModel): boolean {
 }
 
 function resultUrl(item: TaskResultHistoryModel): string {
-  return resProxy(item.items?.[0]?.resultUrl || '')
+  const sub = item.items?.[0]
+  return resProxy(sub?.resultUrl || sub?.videoUrl || '')
 }
 
 function coverUrl(item: TaskResultHistoryModel): string {
@@ -363,7 +366,7 @@ function handleReGenerate(item: TaskResultHistoryModel) {
 
 function previewItem(item: TaskResultHistoryModel) {
   const sub = item.items?.[0]
-  if (!sub?.resultUrl && !sub?.coverUrl) return
+  if (!sub?.resultUrl && !sub?.videoUrl && !sub?.coverUrl) return
   if (isRunning(item)) {
     showToast('任务还在生成中...')
     return
@@ -379,7 +382,7 @@ async function handleDownload(item: TaskResultHistoryModel | null) {
 
   const isVideoFile = isVideo(item)
   // 原始 URL（用于提取文件名）
-  const rawUrl = isVideoFile ? (sub.resultUrl || sub.coverUrl) : sub.resultUrl
+  const rawUrl = isVideoFile ? (sub.resultUrl || sub.videoUrl || sub.coverUrl) : (sub.resultUrl || sub.videoUrl)
   if (!rawUrl) return
   // 走代理的 URL（用于请求）
   const url = resProxy(rawUrl)
@@ -435,6 +438,23 @@ onMounted(() => {
   if (scrollEl) {
     scrollEl.addEventListener('scroll', onScroll, { passive: true })
   }
+  // 调试：延迟打印数据快照
+  setTimeout(() => {
+    const items = store.filteredList
+    console.log('[Creator] 渲染数据快照, 总数:', items.length)
+    items.slice(0, 3).forEach((item, i) => {
+      const sub = item.items?.[0]
+      console.log(`[Creator] 卡片${i}:`, {
+        agent: item.agent,
+        taskId: sub?.taskId,
+        taskStatus: sub?.taskStatus,
+        resultUrl: sub?.resultUrl,
+        videoUrl: sub?.videoUrl,
+        coverUrl: sub?.coverUrl,
+        fileType: sub?.fileType,
+      })
+    })
+  }, 500)
 })
 
 onUnmounted(() => {

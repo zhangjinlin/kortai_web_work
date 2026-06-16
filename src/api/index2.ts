@@ -84,6 +84,7 @@ export interface TaskResultSubItem {
   taskId: string
   taskStatus: number
   resultUrl?: string
+  videoUrl?: string
   fileType?: string
   coverUrl?: string
   title?: string

@@ -247,6 +247,7 @@ export const useCreatorStore = defineStore('creator', () => {
                 if (sub?.taskId === taskId) {
                   sub.taskStatus = status
                   sub.resultUrl = res.data.resultUrl
+                  sub.videoUrl = res.data.videoUrl
                   sub.coverUrl = res.data.coverUrl
                   sub.fileType = res.data.fileType
                   break
