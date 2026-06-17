@@ -54,7 +54,8 @@ export function decryptMap(response: any): any {
 
   const encryptedText = response.data
   if (typeof encryptedText !== 'string' || !encryptedText) {
-    return {}
+    // data 不是字符串说明响应未加密，直接透传
+    return response
   }
 
   try {
